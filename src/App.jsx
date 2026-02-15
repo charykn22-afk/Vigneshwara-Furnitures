@@ -22,11 +22,16 @@ const styles = `
   .btn-add { width: 100%; padding: 12px; background: #333; color: white; border: none; cursor: pointer; border-radius: 4px; }
   .footer { background: #1a1a1a; color: white; padding: 40px 5%; margin-top: 50px; display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; }
   .footer-section h3 { border-bottom: 2px solid #d4a373; padding-bottom: 10px; margin-bottom: 20px; display: inline-block; }
+  .footer-section p { margin: 8px 0; font-size: 0.9rem; color: #ccc; }
   .contact-btn { background: #d4a373; color: white; padding: 12px 25px; border: none; border-radius: 4px; cursor: pointer; font-weight: bold; margin-top: 15px; }
   .upload-section { background: #fdfaf5; padding: 20px; border-radius: 8px; margin: 20px 5%; border: 2px dashed #d4a373; text-align: center; }
   .logout-btn { background: #ff4b4b; color: white; border: none; padding: 8px 15px; border-radius: 4px; cursor: pointer; font-weight: bold; margin-left: 20px; }
-  .admin-link { color: #555; font-size: 0.7rem; text-decoration: none; margin-top: 20px; display: block; cursor: pointer; }
-  .auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+  
+  /* LOGIN OVERLAY */
+  .auth-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+  .auth-modal { background: white; padding: 30px; border-radius: 12px; position: relative; width: 90%; max-width: 400px; }
+  .close-modal { position: absolute; top: 10px; right: 15px; font-size: 24px; cursor: pointer; border: none; background: none; color: #333; }
+  .admin-trigger { color: #666; font-size: 0.7rem; cursor: pointer; text-decoration: underline; display: block; margin-top: 15px; }
 `;
 
 const FURNITURE_DATA = [
@@ -41,21 +46,17 @@ const CATEGORIES = ["All", "Living Room", "Bedroom", "Office"];
 
 export default function App() {
   const [session, setSession] = useState(null);
-  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [activeFilter, setActiveFilter] = useState("All");
   const [mobileUploads, setMobileUploads] = useState([]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-    });
-
+    supabase.auth.getSession().then(({ data: { session } }) => setSession(session));
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (session) setShowLoginModal(false); // Close login box when logged in
+      if (session) setShowLogin(false);
     });
-
     return () => subscription.unsubscribe();
   }, []);
 
@@ -78,16 +79,11 @@ export default function App() {
     <div className="app-container">
       <style>{styles}</style>
 
-      {/* ADMIN LOGIN MODAL (Only shows when you click the secret link) */}
-      {showLoginModal && !session && (
+      {/* LOGIN POPUP */}
+      {showLogin && !session && (
         <div className="auth-overlay">
-          <div style={{ background: 'white', padding: '20px', borderRadius: '8px', position: 'relative' }}>
-            <button 
-              onClick={() => setShowLoginModal(false)} 
-              style={{ position: 'absolute', right: '10px', top: '10px', border: 'none', background: 'none', cursor: 'pointer', fontSize: '1.2rem' }}
-            >
-              ✕
-            </button>
+          <div className="auth-modal">
+            <button className="close-modal" onClick={() => setShowLogin(false)}>×</button>
             <AuthForm />
           </div>
         </div>
@@ -105,24 +101,22 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center' }}>
           <div className="cart"><strong>Cart: {cartCount}</strong></div>
           {session && (
-            <button className="logout-btn" onClick={() => supabase.auth.signOut()}>
-              Logout
-            </button>
+            <button className="logout-btn" onClick={() => supabase.auth.signOut()}>Logout</button>
           )}
         </div>
       </nav>
 
       {/* HERO */}
       <header className="hero">
-        <h1>Premium Furniture for your Home</h1>
-        <p>మీ ఇంటికి అందమైన ఫర్నిచర్</p>
-        {session && <p style={{ color: '#2a9d8f', fontSize: '0.8rem' }}>Signed in as: {session.user.email}</p>}
+        <h1>Furniture for Minimalists</h1>
+        <p>మీ ఇంటికి అందమైన ఫర్నిచర్ (Premium Furniture for your Home)</p>
+        {session && <p style={{ color: '#2a9d8f', fontSize: '0.8rem' }}>Admin: {session.user.email}</p>}
       </header>
 
-      {/* ADMIN UPLOAD SECTION (Hidden from Customers) */}
+      {/* ADMIN UPLOAD - Only visible when logged in */}
       {session && (
         <div className="upload-section">
-          <h3>Admin Panel: Upload New Photo</h3>
+          <h3>Upload New Furniture Photo</h3>
           <input type="file" accept="image/*" onChange={handleFileUpload} />
         </div>
       )}
@@ -164,16 +158,14 @@ export default function App() {
         ))}
       </main>
 
-      {/* FOOTER */}
+      {/* FOOTER - Restored original data */}
       <footer className="footer">
         <div className="footer-section">
           <h3>Vigneshwara Furnitures</h3>
+          <p>మీ ఇంటికి అందమైన ఫర్నిచర్</p>
           <p>Warangal, Telangana</p>
-          {/* SECRET ADMIN LINK */}
           {!session && (
-            <span className="admin-link" onClick={() => setShowLoginModal(true)}>
-              Admin Login
-            </span>
+            <span className="admin-trigger" onClick={() => setShowLogin(true)}>Admin Login</span>
           )}
         </div>
         <div className="footer-section">
@@ -184,6 +176,7 @@ export default function App() {
         <div className="footer-section">
           <h3>Contact Details</h3>
           <p>📞 +91 9948425625</p>
+          <p>✉️ kanukuntlavenkatrajam@gmail.com</p>
           <button className="contact-btn" onClick={() => window.location = 'mailto:kanukuntlavenkatrajam@gmail.com'}>
             Contact Us / సంప్రదించండి
           </button>
